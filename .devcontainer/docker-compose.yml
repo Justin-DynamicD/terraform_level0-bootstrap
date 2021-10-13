@@ -1,0 +1,13 @@
+version: '3'
+services:
+  nixrover:
+    image: 514032162650.dkr.ecr.us-west-2.amazonaws.com/nixrover:3.3.1
+    volumes:
+      - ..:/workspace:cached
+      - volume-nixrover-idtech:/home/rover
+      - ~/.ssh:/tmp/.ssh-localhost:ro
+    # Overrides default command so things don't shut down after the process ends.
+    command: /bin/sh -c "while sleep 1000; do :; done"
+
+volumes:
+  volume-nixrover-idtech:

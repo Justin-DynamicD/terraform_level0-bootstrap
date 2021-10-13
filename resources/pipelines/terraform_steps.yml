@@ -1,0 +1,75 @@
+# this template is injected as stages
+# this allows the template to switch 
+# between build and deployment jobs easily
+
+parameters:
+  AWSConnection: aws-nonprod
+  jobName: ''
+  Name: dev
+  Pool: DevOps-Builders
+  WorkingDirectory: "./"
+
+stages:
+  - stage: Terraform${{ parameters.jobName }}
+    jobs:
+      - job: Test${{ parameters.jobName }}
+        displayName: Test ${{ parameters.Name }}
+        condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+        pool:
+          name: ${{ parameters.Pool }}
+          demands:
+            - Agent.OS -equals Linux
+        workspace:
+          clean: all
+        steps:
+          - task: AWSShellScript@1
+            displayName: Terraform Init
+            inputs:
+              awsCredentials: ${{ parameters.AWSConnection }}
+              scriptType: inline
+              inlineScript: |
+                cd $(Build.SourcesDirectory)/${{ parameters.WorkingDirectory }}
+                /rover/tfinit.sh
+
+          - task: AWSShellScript@1
+            displayName: Terraform Test
+            inputs:
+              awsCredentials: ${{ parameters.AWSConnection }}
+              scriptType: inline
+              inlineScript: |
+                cd $(Build.SourcesDirectory)/${{ parameters.WorkingDirectory }}
+                terraform plan
+
+      - deployment: Deploy${{ parameters.jobName }}
+        displayName: Deploy ${{ parameters.Name }}
+        condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+        environment: ${{ parameters.Name }}
+        pool:
+          name: ${{ parameters.Pool }}
+          demands:
+            - Agent.OS -equals Linux
+        workspace:
+          clean: all
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: AWSShellScript@1
+                  displayName: Terraform Init
+                  inputs:
+                    awsCredentials: ${{ parameters.AWSConnection }}
+                    scriptType: inline
+                    inlineScript: |
+                      cd $(Build.SourcesDirectory)/${{ parameters.WorkingDirectory }}
+                      /rover/tfinit.sh
+
+                - task: AWSShellScript@1
+                  displayName: Terraform Apply
+                  inputs:
+                    awsCredentials: ${{ parameters.AWSConnection }}
+                    scriptType: inline
+                    inlineScript: |
+                      cd $(Build.SourcesDirectory)/${{ parameters.WorkingDirectory }}
+                      terraform apply -auto-approve

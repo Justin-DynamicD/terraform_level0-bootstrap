@@ -1,0 +1,23 @@
+{
+	"name": "nixrover",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "nixrover",
+	"workspaceFolder": "/workspace",
+	"settings": {
+		"files.eol": "\n",
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"editor.tabSize": 2,
+		"terminal.integrated.scrollback": 2000,
+	},
+	"postCreateCommand": "cp -R /tmp/.ssh-localhost/* ~/.ssh && chmod 700 ~/.ssh && chmod 600 ~/.ssh/* && sudo chown 1000:1000 -R /workspace",
+	"extensions": [
+		"donjayamanne.githistory",
+		"hashicorp.terraform",
+		"hediet.vscode-drawio",
+		"ms-azure-devops.azure-pipelines",
+		"ms-kubernetes-tools.vscode-kubernetes-tools",
+		"mutantdino.resourcemonitor",
+		"oderwat.indent-rainbow",
+		"redhat.vscode-yaml"
+	]
+}

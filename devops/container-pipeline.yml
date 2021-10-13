@@ -1,0 +1,32 @@
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - 'resources/docker/nixrover/*'
+    exclude:
+      - 'resources/docker/nixrover/README.md'
+
+variables:
+  - name: major
+    value: 3
+  - name: minor
+    value: 3
+  - name: patch
+    value: $[counter(variables['minor'], 0)]
+  - name: version
+    value: $(major).$(minor).$(patch)
+
+jobs:
+  - job: BuildContainer
+    displayName: Build container
+    pool: DevOps-Builders
+    workspace:
+      clean: all
+    steps:
+      - template: /resources/pipelines/docker_build_steps.yml
+        parameters:
+          buildContext: 'resources/docker/nixrover'
+          name: nixrover

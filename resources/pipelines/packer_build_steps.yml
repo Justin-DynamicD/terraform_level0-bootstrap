@@ -1,0 +1,26 @@
+# this template is injected as steps
+# this allows it to more easily be injected into build processes if needed
+
+parameters:
+  aws_region: 'us-west-2'
+  buildfile: ''
+  credentials: 'aws-shared'
+  extra_args: ''
+  name: 'AMI'
+  version: $(Build.BuildId)
+  WorkingDirectory: "./"
+
+steps:
+  - task: AWSShellScript@1
+    inputs:
+      awsCredentials: ${{ parameters.credentials }}
+      regionName: ${{ parameters.aws_region }}
+      scriptType: 'inline'
+      workingDirectory: ${{ parameters.WorkingDirectory }}
+      inlineScript: |
+        cd ${{ parameters.WorkingDirectory }}
+        packer build -var image_name=$IMAGE_NAME $EXTRA_ARGS ${{ parameters.buildfile }}
+    env:
+      AWS_REGION: ${{ parameters.aws_region }}
+      EXTRA_ARGS: ${{ parameters.extra_args }}
+      IMAGE_NAME: ${{ parameters.name }}-${{ parameters.version }}
