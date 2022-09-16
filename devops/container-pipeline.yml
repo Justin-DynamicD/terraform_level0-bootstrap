@@ -26,7 +26,7 @@ jobs:
     workspace:
       clean: all
     steps:
-      - template: /resources/pipelines/docker_build_steps.yml
+      - template: /resources/pipelines/azdo/docker_build_steps.yml
         parameters:
           buildContext: 'resources/docker/nixrover'
           name: nixrover
