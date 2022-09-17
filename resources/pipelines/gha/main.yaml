@@ -21,7 +21,7 @@ jobs:
       id: set-matrix
       run: |
         git fetch --depth 2
-        detectfolders -b ${{ github.base_ref }} -d 1
+        /rover/detectfolders.sh -b ${{ github.base_ref }} -d 1
   
   code-validate:
     needs: [job-prep]
@@ -44,6 +44,9 @@ jobs:
         do
           echo $line >> GITHUB_ENV
         done
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: terraform format
       id: fmt
       shell: bash {0}
@@ -56,28 +59,14 @@ jobs:
       continue-on-error: true
     - name: terraform init
       id: Init
-      env:
-        ARM_CLIENT_SECRET: ${{ secrets[format('{0}', env.ARM_CLIENT_SECRET_NAME)] }}
       run: |
-        terraform init -input=false \
-          -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
-          -backend-config="tenant_id=$ARM_TENANT_ID" \
-          -backend-config="client_id=$ARM_CLIENT_ID" \
-          -backend-config="client_secret=$ARM_CLIENT_SECRET" \
-          -backend-config="resource_group_name=$ARM_RESOURCE_GROUP" \
-          -backend-config="storage_account_name=$TF_STORAGE_ACCOUNT" \
-          -backend-config="container_name=$TF_CONTAINER" \
-          -backend-config="key=$TF_KEY"
+        /rover/tfinit.sh
         terraform providers
     - name: terraform validate
       id: validate
-      env:
-        ARM_CLIENT_SECRET: ${{ secrets[format('{0}', env.ARM_CLIENT_SECRET_NAME)] }}
       run: terraform validate
     - name: terraform plan
       id: plan
-      env:
-        ARM_CLIENT_SECRET: ${{ secrets[format('{0}', env.ARM_CLIENT_SECRET_NAME)] }}
       shell: bash {0}
       run: |
         echo 'TF_PLAN<<EOF' >> $GITHUB_ENV
@@ -151,20 +140,15 @@ jobs:
         do
           echo $line >> GITHUB_ENV
         done
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: terraform init
       id: Init
       env:
         ARM_CLIENT_SECRET: ${{ secrets[format('{0}', env.ARM_CLIENT_SECRET_NAME)] }}
       run: |
-        terraform init -input=false \
-          -backend-config="subscription_id=$ARM_SUBSCRIPTION_ID" \
-          -backend-config="tenant_id=$ARM_TENANT_ID" \
-          -backend-config="client_id=$ARM_CLIENT_ID" \
-          -backend-config="client_secret=$ARM_CLIENT_SECRET" \
-          -backend-config="resource_group_name=$ARM_RESOURCE_GROUP" \
-          -backend-config="storage_account_name=$TF_STORAGE_ACCOUNT" \
-          -backend-config="container_name=$TF_CONTAINER" \
-          -backend-config="key=$TF_KEY"
+        /rover/tfinit.sh
         terraform providers
     - name: cleanup legacy tf-plan
       run: rm -rf ${{ github.workspace }}/environments/${{ matrix.folder }}/tfplan

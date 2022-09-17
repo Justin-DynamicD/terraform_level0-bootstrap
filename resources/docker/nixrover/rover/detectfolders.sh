@@ -60,7 +60,7 @@ cd $homedir
 ###
 echo "final value: $JSONMATRIX"
 case $CICD in
-  "azdo") echo "##vso[task.setvariable variable=matrix;isOutput=true]$JSONMATRIX" && echo "##vso[task.setvariable variable=matrix;]$JSONMATRIX";;
-  "gha") echo ::set-output name=matrix::$JSONMATRIX;;
+  azdo) echo "##vso[task.setvariable variable=matrix;isOutput=true]$JSONMATRIX" && echo "##vso[task.setvariable variable=matrix;]$JSONMATRIX";;
+  gha) echo ::set-output name=matrix::$JSONMATRIX;;
   *) echo "CICD pipeline '$CICD' is not recognized, nothing set";;
 esac
