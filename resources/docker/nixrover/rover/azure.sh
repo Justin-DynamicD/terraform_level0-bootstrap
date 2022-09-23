@@ -20,17 +20,27 @@ echo "resource group: $STATERESOURCEGROUP"
 echo "storage account: $STATESA"
 
 if [ $INIT ]; then
-  # these statements are captured by Azure Pipelines
-  echo "##vso[task.setvariable variable=autoContainer;]$ENVNAME"
-  echo "##vso[task.setvariable variable=autoContainer;isOutput=true]$ENVNAME"
-  echo "##vso[task.setvariable variable=autoKey;]$STATEFILE"
-  echo "##vso[task.setvariable variable=autoKey;isOutput=true]$STATEFILE"
-  echo "##vso[task.setvariable variable=autoRegion;]$STATEREGION"
-  echo "##vso[task.setvariable variable=autoRegion;isOutput=true]$STATEREGION"
-  echo "##vso[task.setvariable variable=autoResourceGroup;]$STATERESOURCEGROUP"
-  echo "##vso[task.setvariable variable=autoResourceGroup;isOutput=true]$STATERESOURCEGROUP"
-  echo "##vso[task.setvariable variable=autoStorageAccount;]$STATESA"
-  echo "##vso[task.setvariable variable=autoStorageAccount;isOutput=true]$STATESA"
+  # these statements are captured by the pipeline
+  case $CICD in
+    azdo)
+      echo "##vso[task.setvariable variable=autoContainer;]$ENVNAME"
+      echo "##vso[task.setvariable variable=autoContainer;isOutput=true]$ENVNAME"
+      echo "##vso[task.setvariable variable=autoKey;]$STATEFILE"
+      echo "##vso[task.setvariable variable=autoKey;isOutput=true]$STATEFILE"
+      echo "##vso[task.setvariable variable=autoRegion;]$STATEREGION"
+      echo "##vso[task.setvariable variable=autoRegion;isOutput=true]$STATEREGION"
+      echo "##vso[task.setvariable variable=autoResourceGroup;]$STATERESOURCEGROUP"
+      echo "##vso[task.setvariable variable=autoResourceGroup;isOutput=true]$STATERESOURCEGROUP"
+      echo "##vso[task.setvariable variable=autoStorageAccount;]$STATESA"
+      echo "##vso[task.setvariable variable=autoStorageAccount;isOutput=true]$STATESA";;
+    gha)
+      echo ::set-output name=autoContainer::$ENVNAME
+      echo ::set-output name=autoKey::$STATEFILE
+      echo ::set-output name=autoRegion::$STATEREGION
+      echo ::set-output name=autoResourceGroup::$STATERESOURCEGROUP
+      echo ::set-output name=autoStorageAccount::$STATESA;;
+    *) echo "CICD pipeline '$CICD' is not recognized, nothing set";;
+  esac
 else
   terraform init \
     -backend-config="resource_group_name=$STATERESOURCEGROUP" \

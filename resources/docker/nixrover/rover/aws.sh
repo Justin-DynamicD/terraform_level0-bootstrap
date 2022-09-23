@@ -40,15 +40,24 @@ echo "locktable: $STATETABLE"
 echo "statefile: $STATEFILE"
 
 if [ $INIT ]; then
-  # these statements are captured by Azure Pipelines
-  echo "##vso[task.setvariable variable=autoKey;]$STATEFILE"
-  echo "##vso[task.setvariable variable=autoKey;isOutput=true]$STATEFILE"
-  echo "##vso[task.setvariable variable=autoLockTable;]$STATETABLE"
-  echo "##vso[task.setvariable variable=autoLockTable;isOutput=true]$STATETABLE"
-  echo "##vso[task.setvariable variable=autoRegion;]$STATEREGION"
-  echo "##vso[task.setvariable variable=autoRegion;isOutput=true]$STATEREGION"
-  echo "##vso[task.setvariable variable=autoS3;]$STATEBUCKET"
-  echo "##vso[task.setvariable variable=autoS3;isOutput=true]$STATEBUCKET"
+  # these statements are captured by the pipeline
+  case $CICD in
+    azdo)
+      echo "##vso[task.setvariable variable=autoKey;]$STATEFILE"
+      echo "##vso[task.setvariable variable=autoKey;isOutput=true]$STATEFILE"
+      echo "##vso[task.setvariable variable=autoLockTable;]$STATETABLE"
+      echo "##vso[task.setvariable variable=autoLockTable;isOutput=true]$STATETABLE"
+      echo "##vso[task.setvariable variable=autoRegion;]$STATEREGION"
+      echo "##vso[task.setvariable variable=autoRegion;isOutput=true]$STATEREGION"
+      echo "##vso[task.setvariable variable=autoS3;]$STATEBUCKET"
+      echo "##vso[task.setvariable variable=autoS3;isOutput=true]$STATEBUCKET";;
+    gha)
+      echo ::set-output name=autoKey::$STATEFILE
+      echo ::set-output name=autoLockTable::$STATETABLE
+      echo ::set-output name=autoRegion::$STATEREGION
+      echo ::set-output name=autoS3::$STATEBUCKET;;
+    *) echo "CICD pipeline '$CICD' is not recognized, nothing set";;
+  esac
 else
   terraform init \
     -backend-config="bucket=$STATEBUCKET" \

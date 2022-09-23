@@ -153,6 +153,7 @@ RUN chmod +x /rover/* \
   && chown -R ${USER_NAME}:${USER_NAME} /rover /posh-theme \
   && echo "eval \"\$(oh-my-posh --init --shell bash --config /posh-theme/default.json)\"" >> /home/${USER_NAME}/.bashrc \
   && echo "alias tfinit=/rover/tfinit.sh" >> /home/${USER_NAME}/.bashrc \
+  && echo "alias detectfolders=/rover/detectfolders.sh" >> /home/${USER_NAME}/.bashrc \
   && echo "echo \"shell is intended to use monospace nerdfonts (www.nerdfonts.com)\"" >> /home/${USER_NAME}/.bashrc
 
 # flush workspace for local dev

@@ -3,6 +3,7 @@
 source /rover/banner.sh
 
 # set defaults
+CICD='gha'
 CLOUD='azure'
 TFPATH=$(pwd)
 HOMEDIR=$TFPATH
@@ -45,9 +46,10 @@ fi
 # load user-defined args and override where needed
 ###
 
-while getopts ":c:e:f:ip:t:u" arg; do
+while getopts ":c:d:e:f:ip:t:u" arg; do
   case $arg in
     c) CLOUD=${OPTARG};;
+    d) CICD=${OPTARG};;
     e) ENVNAME=${OPTARG};;
     f) TFPATH=${OPTARG};;
     i) INIT=true;;

@@ -1,0 +1,163 @@
+name: Terraform main workflow
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches:
+    - main
+
+jobs:
+  job-prep:
+    runs-on: [available]
+    defaults:
+      run:
+        working-directory: environments
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+    - name: discover changed plans
+      id: set-matrix
+      run: |
+        git fetch --depth 2
+        /rover/detectfolders.sh -b ${{ github.base_ref }} -d 1
+  
+  code-validate:
+    needs: [job-prep]
+    runs-on: [available]
+    if: needs.job-prep.outputs.matrix != '{"folder":[]}'
+    defaults:
+      run:
+        working-directory: environments/${{ matrix.folder }}
+    env:
+      TF_KEY: ${{ github.repository }}/${{ matrix.folder }}/terraform.tfstate
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.job-prep.outputs.matrix ) }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: set landingzone vars
+      run: |
+        lines=$(cat ../lz.env)
+        for line in $lines
+        do
+          echo $line >> GITHUB_ENV
+        done
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: terraform format
+      id: fmt
+      shell: bash {0}
+      run: |
+        echo 'TF_FMT<<EOF' >> $GITHUB_ENV
+        terraform fmt -diff -check >> $GITHUB_ENV 2>/dev/null
+        ECODE=$?
+        echo 'EOF' >> $GITHUB_ENV
+        exit $ECODE
+      continue-on-error: true
+    - name: terraform init
+      id: Init
+      run: |
+        /rover/tfinit.sh
+        terraform providers
+    - name: terraform validate
+      id: validate
+      run: terraform validate
+    - name: terraform plan
+      id: plan
+      shell: bash {0}
+      run: |
+        echo 'TF_PLAN<<EOF' >> $GITHUB_ENV
+        terraform plan -no-color -out=tfplan >> $GITHUB_ENV 2>/dev/null
+        ECODE=$?
+        echo 'EOF' >> $GITHUB_ENV
+        exit $ECODE
+      continue-on-error: true
+    - uses: actions/github-script@5
+      name: report results
+      if: github.event_name == 'pull_request'
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+
+          <details><summary>Show Format Diff</summary>
+
+          \`\`\`\n
+          ${process.env.TF_FMT}
+          \`\`\`
+
+          </details>
+
+          <details><summary>Show Plan</summary>
+
+          \`\`\`\n
+          ${process.env.TF_PLAN}
+          \`\`\`
+
+          </details>
+
+          *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+    - name: block on failure status
+      if: steps.plan.outcome == 'failure' || steps.fmt.outcome == 'failure'
+      run: exit 1
+    - name: upload tfplan
+      uses: actions/upload-artifact@v2
+      if: github.event_name != 'pull_request'
+      with:
+        name: ${{ matrix.folder }}
+        path: environments/${{ matrix.folder }}/tfplan
+    
+  code-deploy:
+    needs: [job-prep, code-validate]
+    runs-on: [available]
+    if: github.event_name != 'pull_request'
+    defaults:
+      run:
+        working-directory: environments/${{ matrix.folder }}
+    env:
+      TF_KEY: ${{ github.repository }}/${{ matrix.folder }}/terraform.tfstate
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.job-prep.outputs.matrix ) }}
+    steps:
+    - name: set landingzone vars
+      run: |
+        lines=$(cat ../lz.env)
+        for line in $lines
+        do
+          echo $line >> GITHUB_ENV
+        done
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: terraform init
+      id: Init
+      env:
+        ARM_CLIENT_SECRET: ${{ secrets[format('{0}', env.ARM_CLIENT_SECRET_NAME)] }}
+      run: |
+        /rover/tfinit.sh
+        terraform providers
+    - name: cleanup legacy tf-plan
+      run: rm -rf ${{ github.workspace }}/environments/${{ matrix.folder }}/tfplan
+    - name: download ${{ matrix.folder }}
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ matrix.folder }}
+        path: environments/${{ matrix.folder }}
+    - name: terraform apply
+      env:
+        ARM_CLIENT_SECRET: ${{ secrets[format('{0}', env.ARM_CLIENT_SECRET_NAME)] }}
+      run: terraform apply -auto-approve -input=false tfplan
